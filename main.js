@@ -142,27 +142,31 @@ function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
 }
 
 function drawSpell(wrist, landmarks) {
-    const x = wrist.x * canvasElement.width;
-    const y = wrist.y * canvasElement.height;
+    // Fingertip landmarks: 4 (thumb), 8 (index), 12 (middle), 16 (ring), 20 (pinky)
+    const fingerTips = [4, 8, 12, 16, 20];
     
-    // 1. Calculate Size
+    // Calculate a smaller size for the finger spells
     const palmBase = landmarks[0];
     const indexBase = landmarks[5];
-    const size = Math.sqrt(Math.pow(palmBase.x - indexBase.x, 2) + Math.pow(palmBase.y - indexBase.y, 2)) * canvasElement.width * 5;
-
-    // 2. Calculate 3D Tilt (X and Y rotation)
-    // We compare wrist(0), index_mcp(5), and pinky_mcp(17)
-    const index = landmarks[5];
-    const pinky = landmarks[17];
-    
-    // Simple tilt estimation based on relative Z distances
-    // If index is closer (Z smaller) than pinky, hand is tilted
-    const tiltX = (index.z - pinky.z) * 10; 
-    const tiltY = (wrist.z - index.z) * 10;
+    const baseSize = Math.sqrt(Math.pow(palmBase.x - indexBase.x, 2) + Math.pow(palmBase.y - indexBase.y, 2)) * canvasElement.width;
+    const fingerSpellSize = baseSize * 2.5; // Smaller than palm shield
 
     rotation += 0.05;
-    
-    drawProceduralSpell(canvasCtx, x, y, size, rotation, tiltX, tiltY);
+
+    fingerTips.forEach(tipIdx => {
+        const tip = landmarks[tipIdx];
+        const x = tip.x * canvasElement.width;
+        const y = tip.y * canvasElement.height;
+        
+        // Calculate a slight individual tilt for each finger if possible, 
+        // or just use the general hand tilt
+        const index = landmarks[5];
+        const pinky = landmarks[17];
+        const tiltX = (index.z - pinky.z) * 10; 
+        const tiltY = (wrist.z - index.z) * 10;
+
+        drawProceduralSpell(canvasCtx, x, y, fingerSpellSize, rotation, tiltX, tiltY);
+    });
 }
 
 function updateParticles() {
