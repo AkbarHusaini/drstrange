@@ -9,51 +9,77 @@ let lastResults = null;
 
 const mysticGlyphs = ['❂', '❈', '🌀', '✧', '⎈', '⚔', '🛡', '⚛', '⚜', '✵'];
 
-
-// Particle system for sparks
+// Particle system
 const particles = [];
 class Particle {
-    constructor(x, y, color) {
+    constructor(x, y, color, type = 'spark') {
         this.x = x;
         this.y = y;
-        this.size = Math.random() * 3 + 1;
+        this.size = type === 'heart' ? Math.random() * 15 + 10 : Math.random() * 3 + 1;
         this.speedX = (Math.random() - 0.5) * 5;
         this.speedY = (Math.random() - 0.5) * 5;
         this.color = color;
         this.life = 1.0;
+        this.type = type;
+        this.rotation = Math.random() * Math.PI * 2;
     }
     update() {
         this.x += this.speedX;
         this.y += this.speedY;
         this.life -= 0.02;
+        if (this.type === 'heart') this.rotation += 0.05;
     }
     draw(ctx) {
+        ctx.save();
         ctx.globalAlpha = this.life;
         ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.translate(this.x, this.y);
+        
+        if (this.type === 'heart') {
+            ctx.rotate(this.rotation);
+            ctx.beginPath();
+            const s = this.size;
+            ctx.moveTo(0, s/4);
+            ctx.bezierCurveTo(-s/2, -s/2, -s, s/4, 0, s);
+            ctx.bezierCurveTo(s, s/4, s/2, -s/2, 0, s/4);
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
     }
+}
+
+function checkFingerHeart(landmarks) {
+    const thumbTip = landmarks[4];
+    const indexTip = landmarks[8];
+    const middleTip = landmarks[12];
+    const wrist = landmarks[0];
+    
+    // Check if thumb and index tips are close
+    const heartDist = Math.sqrt(Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2));
+    
+    // Check if middle finger is folded
+    const middleDist = Math.sqrt(Math.pow(middleTip.x - wrist.x, 2) + Math.pow(middleTip.y - wrist.y, 2));
+    const indexBaseDist = Math.sqrt(Math.pow(landmarks[5].x - wrist.x, 2) + Math.pow(landmarks[5].y - wrist.y, 2));
+
+    return heartDist < 0.05 && middleDist < indexBaseDist;
 }
 
 function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
     ctx.save();
     ctx.translate(x, y);
-    
-    // Apply 3D Perspective Projection (Simulated)
-    // We use tiltX and tiltY to skew and scale the canvas
     ctx.transform(1, tiltY * 0.5, tiltX * 0.5, 1 - Math.abs(tiltX) * 0.2 - Math.abs(tiltY) * 0.2, 0, 0);
 
-    // Set glow effect
     ctx.shadowBlur = 25;
     ctx.shadowColor = '#ff9d00';
     ctx.strokeStyle = '#ff9d00';
     ctx.lineWidth = 2;
     ctx.globalCompositeOperation = 'lighter';
 
-    // Draw layers with different Z-offsets (simulated by scale and rotation speed)
-    
-    // 1. Outer Decorative Ring (Distant)
+    // Outer Decorative Ring
     ctx.save();
     ctx.scale(1.1, 1.1);
     ctx.rotate(rotation * 0.2);
@@ -64,19 +90,17 @@ function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
     ctx.stroke();
     ctx.restore();
 
-    // 2. Main Outer Ring
+    // Main Rings
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
     ctx.stroke();
-
-    // 3. Thick Inner Ring
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 4. Glyph Ring
+    // Glyphs
     ctx.save();
     ctx.rotate(-rotation * 0.5);
     ctx.fillStyle = '#ff9d00';
@@ -93,7 +117,7 @@ function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
     }
     ctx.restore();
 
-    // 5. Rotating Geometric Core
+    // Geometric Core
     ctx.save();
     ctx.rotate(rotation);
     ctx.lineWidth = 2;
@@ -107,10 +131,10 @@ function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
     }
     ctx.restore();
 
-    // 6. Inner Geometric Layer (Faster)
+    // Inner Layer
     ctx.save();
     ctx.rotate(-rotation * 1.5);
-    ctx.scale(0.9, 0.9); // Slightly offset for 3D feel
+    ctx.scale(0.9, 0.9);
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
@@ -124,14 +148,14 @@ function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
     ctx.stroke();
     ctx.restore();
 
-    // 7. Center Core (Brightest)
+    // Center Core
     ctx.shadowBlur = 40;
     ctx.beginPath();
     ctx.arc(0, 0, size * 0.05, 0, Math.PI * 2);
     ctx.fillStyle = '#ffcc00';
     ctx.fill();
     
-    // Emit particles
+    // Particles
     if (Math.random() > 0.3) {
         const angle = Math.random() * Math.PI * 2;
         const dist = size * 0.5 * Math.random();
@@ -142,43 +166,28 @@ function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
 }
 
 function drawSpell(wrist, landmarks) {
-    // Fingertip landmarks: 4 (thumb), 8 (index), 12 (middle), 16 (ring), 20 (pinky)
     const fingerTips = [4, 8, 12, 16, 20];
-    
-    // 1. Calculate the Center Point (Average) of all fingertips
-    let centerX = 0;
-    let centerY = 0;
-    let centerZ = 0;
-    
+    let centerX = 0, centerY = 0;
     fingerTips.forEach(tipIdx => {
         centerX += landmarks[tipIdx].x;
         centerY += landmarks[tipIdx].y;
-        centerZ += landmarks[tipIdx].z;
     });
-    
     centerX /= fingerTips.length;
     centerY /= fingerTips.length;
-    centerZ /= fingerTips.length;
 
     const x = centerX * canvasElement.width;
     const y = centerY * canvasElement.height;
-
-    // 2. Calculate dynamic size based on the spread of the fingers
-    // We'll use the distance between thumb (4) and pinky (20)
     const thumb = landmarks[4];
     const pinky = landmarks[20];
     const spread = Math.sqrt(Math.pow(thumb.x - pinky.x, 2) + Math.pow(thumb.y - pinky.y, 2)) * canvasElement.width;
-    const size = spread * 1.5; // Scale it up to look like a shield
+    const size = spread * 1.5;
 
-    // 3. Calculate 3D Tilt based on hand orientation
     const index = landmarks[5];
     const pinky_mcp = landmarks[17];
     const tiltX = (index.z - pinky_mcp.z) * 10; 
     const tiltY = (wrist.z - index.z) * 10;
 
     rotation += 0.05;
-    
-    // 4. Draw a single large spell at the center
     drawProceduralSpell(canvasCtx, x, y, size, rotation, tiltX, tiltY);
 }
 
@@ -198,9 +207,7 @@ function onResults(results) {
         loadingScreen.style.opacity = '0';
         setTimeout(() => loadingScreen.style.display = 'none', 500);
     }
-
     lastResults = results;
-
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     
@@ -215,7 +222,19 @@ function onResults(results) {
         instructions.classList.add('hidden');
         for (const landmarks of results.multiHandLandmarks) {
             const wrist = landmarks[0];
-            if (checkHandOpen(landmarks)) {
+            if (checkFingerHeart(landmarks)) {
+                const x = landmarks[8].x * canvasElement.width;
+                const y = landmarks[8].y * canvasElement.height;
+                if (Math.random() > 0.8) {
+                    particles.push(new Particle(x, y, '#ff4d6d', 'heart'));
+                }
+                canvasCtx.fillStyle = '#ff4d6d';
+                canvasCtx.font = '30px Arial';
+                canvasCtx.textAlign = 'center';
+                canvasCtx.shadowBlur = 15;
+                canvasCtx.shadowColor = '#ff4d6d';
+                canvasCtx.fillText('❤️', x, y - 40);
+            } else if (checkHandOpen(landmarks)) {
                 drawSpell(wrist, landmarks);
             }
         }
@@ -240,9 +259,7 @@ function checkHandOpen(landmarks) {
 }
 
 const hands = new Hands({
-    locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-    }
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
 
 hands.setOptions({
@@ -256,15 +273,10 @@ hands.onResults(onResults);
 
 async function initCamera() {
     try {
-        // Request initial permission to ensure labels are populated
         await navigator.mediaDevices.getUserMedia({ video: true });
-        
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
         
-        console.log('Available video devices:', videoDevices);
-
-        // Try to find a device that is NOT DroidCam or OBS
         let selectedDevice = videoDevices.find(device => 
             !device.label.toLowerCase().includes('droidcam') && 
             !device.label.toLowerCase().includes('obs') &&
@@ -290,15 +302,12 @@ async function initCamera() {
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         videoElement.srcObject = stream;
-        
         videoElement.onloadedmetadata = () => {
             videoElement.play();
             requestAnimationFrame(processVideo);
         };
-
     } catch (error) {
         console.error('Error initializing camera:', error);
-        // Fallback to basic constraints if specific device fails
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             videoElement.srcObject = stream;
@@ -314,7 +323,6 @@ async function initCamera() {
 
 async function processVideo() {
     if (videoElement.paused || videoElement.ended) return;
-    
     await hands.send({ image: videoElement });
     requestAnimationFrame(processVideo);
 }
