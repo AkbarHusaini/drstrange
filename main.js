@@ -71,91 +71,104 @@ function checkFingerHeart(landmarks) {
 function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
     ctx.save();
     ctx.translate(x, y);
+    
+    // Core Transform for 3D Perspective
     ctx.transform(1, tiltY * 0.5, tiltX * 0.5, 1 - Math.abs(tiltX) * 0.2 - Math.abs(tiltY) * 0.2, 0, 0);
 
-    ctx.shadowBlur = 25;
-    ctx.shadowColor = '#ff9d00';
-    ctx.strokeStyle = '#ff9d00';
-    ctx.lineWidth = 2;
     ctx.globalCompositeOperation = 'lighter';
 
-    // Outer Decorative Ring
-    ctx.save();
-    ctx.scale(1.1, 1.1);
-    ctx.rotate(rotation * 0.2);
-    ctx.setLineDash([5, 15]);
-    ctx.globalAlpha = 0.4;
-    ctx.beginPath();
-    ctx.arc(0, 0, size * 0.55, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    // Helper to draw a layered ring
+    const drawRing = (radius, width, dash = [], rot = 0, color = '#ff9d00', glow = 15) => {
+        ctx.save();
+        ctx.rotate(rot);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.shadowBlur = glow;
+        ctx.shadowColor = color;
+        if (dash.length) ctx.setLineDash(dash);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    };
 
-    // Main Rings
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
-    ctx.stroke();
+    // 1. Far Outer Aura (Very Faint)
+    drawRing(size * 0.65, 1, [2, 10], rotation * 0.1, 'rgba(255, 100, 0, 0.2)', 30);
 
-    // Glyphs
+    // 2. Main Outer Ring (Decorative)
+    drawRing(size * 0.55, 2, [10, 20], -rotation * 0.2, '#ff8000', 10);
+
+    // 3. Thick Boundary Ring
+    drawRing(size * 0.5, 4, [], 0, '#ff9d00', 20);
+
+    // 4. Glyph Ring (Mystic Symbols)
     ctx.save();
-    ctx.rotate(-rotation * 0.5);
+    ctx.rotate(-rotation * 0.4);
     ctx.fillStyle = '#ff9d00';
-    ctx.font = `${size * 0.08}px serif`;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ff9d00';
+    ctx.font = `${size * 0.07}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for(let i=0; i<mysticGlyphs.length; i++) {
         ctx.save();
         ctx.rotate((i * Math.PI * 2) / mysticGlyphs.length);
-        ctx.translate(size * 0.38, 0);
+        ctx.translate(size * 0.45, 0);
         ctx.rotate(Math.PI / 2);
         ctx.fillText(mysticGlyphs[i], 0, 0);
         ctx.restore();
     }
     ctx.restore();
 
-    // Geometric Core
-    ctx.save();
-    ctx.rotate(rotation);
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 3; i++) {
-        ctx.rotate(Math.PI / 3);
-        ctx.beginPath();
-        ctx.moveTo(-size * 0.4, 0);
-        ctx.lineTo(size * 0.4, 0);
-        ctx.stroke();
-        ctx.strokeRect(-size * 0.3, -size * 0.3, size * 0.6, size * 0.6);
-    }
-    ctx.restore();
+    // 5. Secondary Boundary Ring
+    drawRing(size * 0.4, 2, [], 0, '#ff9d00', 15);
 
-    // Inner Layer
+    // 6. Geometric Layer 1 (Hexagons)
     ctx.save();
-    ctx.rotate(-rotation * 1.5);
-    ctx.scale(0.9, 0.9);
+    ctx.rotate(rotation * 0.8);
+    ctx.strokeStyle = '#ff9d00';
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-        const angle = (i * Math.PI * 2) / 6;
-        const px = Math.cos(angle) * size * 0.2;
-        const py = Math.sin(angle) * size * 0.2;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+    for (let j = 0; j < 2; j++) {
+        ctx.rotate(Math.PI / 6);
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI * 2) / 6;
+            const r = size * 0.38;
+            ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        }
+        ctx.closePath();
+        ctx.stroke();
     }
-    ctx.closePath();
-    ctx.stroke();
     ctx.restore();
 
-    // Center Core
+    // 7. Geometric Layer 2 (Stars/Triangles)
+    ctx.save();
+    ctx.rotate(-rotation * 1.2);
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+        ctx.rotate(Math.PI / 1.5);
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.35, 0);
+        ctx.lineTo(size * 0.35, 0);
+        ctx.stroke();
+        ctx.strokeRect(-size * 0.25, -size * 0.25, size * 0.5, size * 0.5);
+    }
+    ctx.restore();
+
+    // 8. Inner Fast Ring
+    drawRing(size * 0.15, 3, [5, 5], rotation * 3, '#ffcc00', 10);
+
+    // 9. Core Sphere
+    ctx.save();
     ctx.shadowBlur = 40;
+    ctx.shadowColor = '#fff';
+    ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(0, 0, size * 0.05, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffcc00';
+    ctx.arc(0, 0, size * 0.04, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Particles
+    ctx.restore();
+
+    // 10. Particles
     if (Math.random() > 0.3) {
         const angle = Math.random() * Math.PI * 2;
         const dist = size * 0.5 * Math.random();
