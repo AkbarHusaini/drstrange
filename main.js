@@ -10,24 +10,27 @@ let lastResults = null;
 const mysticGlyphs = ['❂', '❈', '🌀', '✧', '⎈', '⚔', '🛡', '⚛', '⚜', '✵'];
 
 // Particle system
-const particles = [];
+const kicauCatImg = new Image();
+kicauCatImg.src = 'assets/kicau_cat.png';
+
 class Particle {
     constructor(x, y, color, type = 'spark') {
         this.x = x;
         this.y = y;
-        this.size = type === 'fire' ? Math.random() * 8 + 4 : (type === 'heart' ? Math.random() * 15 + 10 : Math.random() * 3 + 1);
-        this.speedX = (Math.random() - 0.5) * (type === 'fire' ? 3 : 5);
-        this.speedY = type === 'fire' ? -Math.random() * 5 - 2 : (Math.random() - 0.5) * 5;
+        this.size = type === 'heart' ? Math.random() * 15 + 10 : (type === 'note' ? Math.random() * 20 + 10 : Math.random() * 3 + 1);
+        this.speedX = (Math.random() - 0.5) * 5;
+        this.speedY = type === 'note' ? -Math.random() * 3 - 1 : (type === 'fire' ? -Math.random() * 5 - 2 : (Math.random() - 0.5) * 5);
         this.color = color;
         this.life = 1.0;
         this.type = type;
         this.rotation = Math.random() * Math.PI * 2;
+        this.note = ['♪', '♫', '♬', '♩'][Math.floor(Math.random() * 4)];
     }
     update() {
         this.x += this.speedX;
         this.y += this.speedY;
-        this.life -= this.type === 'fire' ? 0.03 : 0.02;
-        if (this.type === 'heart') this.rotation += 0.05;
+        this.life -= (this.type === 'fire' || this.type === 'note') ? 0.03 : 0.02;
+        if (this.type === 'heart' || this.type === 'note') this.rotation += 0.05;
         // Fire color shift
         if (this.type === 'fire') {
             const r = 255;
@@ -51,13 +54,13 @@ class Particle {
             ctx.bezierCurveTo(-s/2, -s/2, -s, s/4, 0, s);
             ctx.bezierCurveTo(s, s/4, s/2, -s/2, 0, s/4);
             ctx.fill();
-        } else if (this.type === 'fire') {
+        } else if (this.type === 'note') {
+            ctx.rotate(this.rotation);
+            ctx.font = `${this.size}px Arial`;
+            ctx.fillText(this.note, 0, 0);
+        } else if (this.type === 'fire' || this.type === 'spark') {
             ctx.shadowBlur = 10;
             ctx.shadowColor = this.color;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
             ctx.beginPath();
             ctx.arc(0, 0, this.size, 0, Math.PI * 2);
             ctx.fill();
@@ -80,6 +83,23 @@ function checkFingerHeart(landmarks) {
     const indexBaseDist = Math.sqrt(Math.pow(landmarks[5].x - wrist.x, 2) + Math.pow(landmarks[5].y - wrist.y, 2));
 
     return heartDist < 0.05 && middleDist < indexBaseDist;
+}
+
+function checkOkSign(landmarks) {
+    const thumbTip = landmarks[4];
+    const indexTip = landmarks[8];
+    const middleTip = landmarks[12];
+    const pinkyTip = landmarks[20];
+    const wrist = landmarks[0];
+    
+    // 1. Thumb and Index tips are close
+    const dist = Math.sqrt(Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2));
+    
+    // 2. Other fingers are extended
+    const middleDist = Math.sqrt(Math.pow(middleTip.x - wrist.x, 2) + Math.pow(middleTip.y - wrist.y, 2));
+    const wristToBase = Math.sqrt(Math.pow(landmarks[9].x - wrist.x, 2) + Math.pow(landmarks[9].y - wrist.y, 2));
+    
+    return dist < 0.05 && middleDist > wristToBase * 1.5;
 }
 
 function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
