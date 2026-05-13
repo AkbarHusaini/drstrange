@@ -247,14 +247,20 @@ async function initCamera() {
         
         console.log('Available video devices:', videoDevices);
 
-        // Try to find a device that is NOT DroidCam
+        // Try to find a device that is NOT DroidCam or OBS
         let selectedDevice = videoDevices.find(device => 
             !device.label.toLowerCase().includes('droidcam') && 
-            (device.label.toLowerCase().includes('integrated') || device.label.toLowerCase().includes('camera'))
+            !device.label.toLowerCase().includes('obs') &&
+            (device.label.toLowerCase().includes('facetime') || 
+             device.label.toLowerCase().includes('integrated') || 
+             device.label.toLowerCase().includes('camera'))
         );
 
         if (!selectedDevice) {
-            selectedDevice = videoDevices.find(device => !device.label.toLowerCase().includes('droidcam'));
+            selectedDevice = videoDevices.find(device => 
+                !device.label.toLowerCase().includes('droidcam') && 
+                !device.label.toLowerCase().includes('obs')
+            );
         }
 
         const constraints = {
