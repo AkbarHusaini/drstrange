@@ -15,9 +15,9 @@ class Particle {
     constructor(x, y, color, type = 'spark') {
         this.x = x;
         this.y = y;
-        this.size = type === 'heart' ? Math.random() * 15 + 10 : Math.random() * 3 + 1;
-        this.speedX = (Math.random() - 0.5) * 5;
-        this.speedY = (Math.random() - 0.5) * 5;
+        this.size = type === 'fire' ? Math.random() * 8 + 4 : (type === 'heart' ? Math.random() * 15 + 10 : Math.random() * 3 + 1);
+        this.speedX = (Math.random() - 0.5) * (type === 'fire' ? 3 : 5);
+        this.speedY = type === 'fire' ? -Math.random() * 5 - 2 : (Math.random() - 0.5) * 5;
         this.color = color;
         this.life = 1.0;
         this.type = type;
@@ -26,8 +26,16 @@ class Particle {
     update() {
         this.x += this.speedX;
         this.y += this.speedY;
-        this.life -= 0.02;
+        this.life -= this.type === 'fire' ? 0.03 : 0.02;
         if (this.type === 'heart') this.rotation += 0.05;
+        // Fire color shift
+        if (this.type === 'fire') {
+            const r = 255;
+            const g = Math.floor(200 * this.life);
+            const b = 0;
+            this.color = `rgba(${r}, ${g}, ${b}, ${this.life})`;
+            this.size *= 0.96; // Shrink as they rise
+        }
     }
     draw(ctx) {
         ctx.save();
@@ -42,6 +50,12 @@ class Particle {
             ctx.moveTo(0, s/4);
             ctx.bezierCurveTo(-s/2, -s/2, -s, s/4, 0, s);
             ctx.bezierCurveTo(s, s/4, s/2, -s/2, 0, s/4);
+            ctx.fill();
+        } else if (this.type === 'fire') {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = this.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size, 0, Math.PI * 2);
             ctx.fill();
         } else {
             ctx.beginPath();
@@ -168,11 +182,11 @@ function drawProceduralSpell(ctx, x, y, size, rotation, tiltX, tiltY) {
     ctx.fill();
     ctx.restore();
 
-    // 10. Particles
-    if (Math.random() > 0.3) {
+    // 10. Fire Particles
+    if (Math.random() > 0.4) {
         const angle = Math.random() * Math.PI * 2;
-        const dist = size * 0.5 * Math.random();
-        particles.push(new Particle(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, '#ff9d00'));
+        const dist = size * 0.45 * Math.random();
+        particles.push(new Particle(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, '#ff9d00', 'fire'));
     }
 
     ctx.restore();
