@@ -145,28 +145,41 @@ function drawSpell(wrist, landmarks) {
     // Fingertip landmarks: 4 (thumb), 8 (index), 12 (middle), 16 (ring), 20 (pinky)
     const fingerTips = [4, 8, 12, 16, 20];
     
-    // Calculate a smaller size for the finger spells
-    const palmBase = landmarks[0];
-    const indexBase = landmarks[5];
-    const baseSize = Math.sqrt(Math.pow(palmBase.x - indexBase.x, 2) + Math.pow(palmBase.y - indexBase.y, 2)) * canvasElement.width;
-    const fingerSpellSize = baseSize * 2.5; // Smaller than palm shield
+    // 1. Calculate the Center Point (Average) of all fingertips
+    let centerX = 0;
+    let centerY = 0;
+    let centerZ = 0;
+    
+    fingerTips.forEach(tipIdx => {
+        centerX += landmarks[tipIdx].x;
+        centerY += landmarks[tipIdx].y;
+        centerZ += landmarks[tipIdx].z;
+    });
+    
+    centerX /= fingerTips.length;
+    centerY /= fingerTips.length;
+    centerZ /= fingerTips.length;
+
+    const x = centerX * canvasElement.width;
+    const y = centerY * canvasElement.height;
+
+    // 2. Calculate dynamic size based on the spread of the fingers
+    // We'll use the distance between thumb (4) and pinky (20)
+    const thumb = landmarks[4];
+    const pinky = landmarks[20];
+    const spread = Math.sqrt(Math.pow(thumb.x - pinky.x, 2) + Math.pow(thumb.y - pinky.y, 2)) * canvasElement.width;
+    const size = spread * 1.5; // Scale it up to look like a shield
+
+    // 3. Calculate 3D Tilt based on hand orientation
+    const index = landmarks[5];
+    const pinky_mcp = landmarks[17];
+    const tiltX = (index.z - pinky_mcp.z) * 10; 
+    const tiltY = (wrist.z - index.z) * 10;
 
     rotation += 0.05;
-
-    fingerTips.forEach(tipIdx => {
-        const tip = landmarks[tipIdx];
-        const x = tip.x * canvasElement.width;
-        const y = tip.y * canvasElement.height;
-        
-        // Calculate a slight individual tilt for each finger if possible, 
-        // or just use the general hand tilt
-        const index = landmarks[5];
-        const pinky = landmarks[17];
-        const tiltX = (index.z - pinky.z) * 10; 
-        const tiltY = (wrist.z - index.z) * 10;
-
-        drawProceduralSpell(canvasCtx, x, y, fingerSpellSize, rotation, tiltX, tiltY);
-    });
+    
+    // 4. Draw a single large spell at the center
+    drawProceduralSpell(canvasCtx, x, y, size, rotation, tiltX, tiltY);
 }
 
 function updateParticles() {
